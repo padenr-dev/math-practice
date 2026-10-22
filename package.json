@@ -1,0 +1,19 @@
+{
+  "name": "math-practice",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Free math practice for Grade 5, built on Google Apps Script (IXL alternative prototype).",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test",
+    "build": "node scripts/build.js",
+    "push": "npm run build && clasp push --force",
+    "deploy": "npm run push && node scripts/deploy.js"
+  },
+  "devDependencies": {
+    "@google/clasp": "^2.4.2"
+  }
+}
