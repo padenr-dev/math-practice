@@ -6,7 +6,7 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import vm from 'node:vm';
-import { build, stripModuleSyntax } from '../scripts/build.js';
+import { build, stripModuleSyntax, topLevelNames } from '../scripts/build.js';
 
 test('strips module syntax and rejects unsupported forms', () => {
   const out = stripModuleSyntax("import { a } from './a.js';\nexport function f() {}\nexport const x = 1;", 't');
@@ -36,7 +36,16 @@ test('built bundle runs doGet in an Apps Script-like global scope', () => {
     const bundle = files.filter((f) => f.endsWith('.js')).map((f) => readFileSync(join(dir, f), 'utf8')).join('\n');
     vm.runInContext(bundle + '\ndoGet();', context);
     assert.equal(rendered, 'Hello, paden@school.org');
+
+    // The question engine works after the module syntax is stripped.
+    const q = vm.runInContext("findSkill('C.1').generate(createRng(5), 2)", context);
+    assert.equal(vm.runInContext(`findSkill('C.1').check(${JSON.stringify(q)}, ${JSON.stringify(q.answerText)}).correct`, context), true);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('finds top-level names so the build can reject duplicates', () => {
+  const src = 'function a() {\n  const inner = 1;\n}\nconst B = 2;\nlet c;\nclass D {}\nasync function e() {}';
+  assert.deepEqual(topLevelNames(src), ['a', 'B', 'c', 'D', 'e']);
 });
