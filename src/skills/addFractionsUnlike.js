@@ -1,7 +1,8 @@
 // C.1 Add fractions with unlike denominators (CCSS 5.NF.A.1).
 //   Difficulty 1: one denominator is a multiple of the other (1/3 + 1/6), sum below 1.
 //   Difficulty 2: unrelated denominators up to 6 (1/4 + 2/3).
-//   Difficulty 3: unrelated denominators up to 12, sums can pass 1 (5/6 + 3/8).
+//   Difficulty 3: unrelated denominators up to 12 (common denominator at most
+//                 36, so no 7ths with 12ths), sums can pass 1 (5/6 + 3/8).
 import { randInt, randPick } from '../core/random.js';
 import { makeFraction, simplifyFraction, addFractions, lcm, gcd, formatMixed, formatFraction } from '../core/fractions.js';
 import { checkAnswer } from '../core/answers.js';
@@ -17,7 +18,7 @@ function pickAddFractionDenominators(rng, difficulty) {
   for (;;) {
     const a = randInt(rng, 2, max);
     const b = randInt(rng, 2, max);
-    if (a !== b && a % b !== 0 && b % a !== 0) return [a, b];
+    if (a !== b && a % b !== 0 && b % a !== 0 && lcm(a, b) <= 36) return [a, b];
   }
 }
 

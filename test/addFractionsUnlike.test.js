@@ -21,6 +21,7 @@ test('difficulty 2 and 3: unrelated denominators within range; 3 sometimes passe
       const { a, b } = q.data;
       assert.ok(a.den % b.den !== 0 && b.den % a.den !== 0, q.prompt);
       assert.ok(a.den <= max && b.den <= max, q.prompt);
+      assert.ok(q.data.common <= 36, q.prompt);
     }
   }
   assert.ok(questions(3).some((q) => q.answer.num > q.answer.den));
