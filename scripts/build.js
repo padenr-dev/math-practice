@@ -38,16 +38,40 @@ export function stripModuleSyntax(source, fileLabel) {
     .join('\n');
 }
 
+// Top-level declarations in a script (src/ after stripping, or gas/).
+export function topLevelNames(source) {
+  const names = [];
+  for (const m of source.matchAll(/^(?:async\s+)?(?:function\*?|const|let|var|class)\s+([A-Za-z_$][\w$]*)/gm)) names.push(m[1]);
+  return names;
+}
+
+// Apps Script shares one global scope, so a repeated name would silently
+// overwrite another file's function. Fail the build instead.
+function assertUniqueNames(scripts) {
+  const seen = new Map();
+  for (const [label, source] of scripts) {
+    for (const name of topLevelNames(source)) {
+      if (seen.has(name)) throw new Error(`top-level name "${name}" is in both ${seen.get(name)} and ${label}`);
+      seen.set(name, label);
+    }
+  }
+}
+
 export function build(outDir = join(ROOT, 'dist')) {
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
 
   // src/core/greeting.js -> dist/src_core_greeting.js (clasp pushes flat files fine)
+  const scripts = [];
   for (const file of listFiles(join(ROOT, 'src'), '.js')) {
     const rel = relative(ROOT, file);
     const target = rel.replace(/[\\/]/g, '_');
-    writeFileSync(join(outDir, target), `// Built from ${rel}. Do not edit.\n` + stripModuleSyntax(readFileSync(file, 'utf8'), rel));
+    const source = stripModuleSyntax(readFileSync(file, 'utf8'), rel);
+    scripts.push([rel, source]);
+    writeFileSync(join(outDir, target), `// Built from ${rel}. Do not edit.\n` + source);
   }
+  for (const file of listFiles(join(ROOT, 'gas'), '.js')) scripts.push([relative(ROOT, file), readFileSync(file, 'utf8')]);
+  assertUniqueNames(scripts);
   for (const file of listFiles(join(ROOT, 'gas'), '')) {
     copyFileSync(file, join(outDir, relative(join(ROOT, 'gas'), file).replace(/[\\/]/g, '_')));
   }
