@@ -1,32 +1,29 @@
-# Handoff — after chunk 1 (2026-10-22)
+# Handoff — after chunk 2 (2026-10-23)
 
 ## Done
-- Skill interface documented in `src/core/skill.js`: `{ id, title, grade, category, generate(rng, difficulty), check(question, input) }`. Questions are plain JSON-safe data. `validateSkill` / `validateQuestion` enforce the contract.
-- Seeded random numbers (`src/core/random.js`: `createRng(seed)`, `randInt`, `randPick`). Same seed, same question.
-- Exact fraction math (`src/core/fractions.js`). Every answer type is compared as a fraction, so decimals never hit float rounding.
-- Answer parsing and checking (`src/core/answers.js`): types `integer`, `decimal`, `fraction`. Fractions accept `3/4`, `1 3/4`, `7/4`, whole numbers, and `{ whole, num, den }` objects from separate input boxes. Equivalent fractions count as correct unless `question.requireSimplest`, in which case the result is `{ correct: false, unsimplified: true }`.
-- Two skills: **C.1 Add fractions with unlike denominators** and **A.3 Round decimals**, each with 3 difficulty levels, a hint, and a step-by-step explanation.
-- Skill registry `src/skills/registry.js`: `allSkills()`, `findSkill(id)`.
-- Build now fails if two files in `src/` or `gas/` declare the same top-level name (Apps Script's shared global scope would silently overwrite one).
+- SmartScore in `src/core/smartScore.js`: score 0–100, big early gains, smaller near mastery, a penalty for wrong answers that grows with the score, Challenge Zone at 90–99, mastered at 100. The rules are one table (`SMART_SCORE_BANDS`) documented at the top of the file.
+- `difficultyForScore(score)`: difficulty 1 below 40, 2 from 40, 3 from 75.
+- Score is never stored. `replaySmartScore(events, startScore)` rebuilds it from answer events, so chunk 4 can recompute it from Sheet rows.
+- Practice sessions in `src/core/practiceSession.js`: `startPracticeSession`, `recordPracticeAnswer` (turns a `check()` result into an answer event), `nextPracticeQuestion` (picks difficulty from the current score), `practiceSessionScore`, `practiceSessionStats` (answered, correct, wrong, accuracy %, seconds, start score, score, change, Challenge Zone, mastered).
 
 ## How to test it
-- `npm test` (39 tests). `test/skills.test.js` runs every registered skill through 300 seeds × 3 difficulties: valid question, its own answer is accepted, near-miss answers are rejected, junk input is flagged invalid.
-- Try it by hand: `node -e "import('./src/skills/registry.js').then(async ({findSkill}) => { const {createRng} = await import('./src/core/random.js'); const s = findSkill('C.1'); const q = s.generate(createRng(1), 3); console.log(q.prompt, s.check(q, '1/2')); })"`
+- `npm test` (56 tests). `test/smartScore.test.js` has scripted sequences and the exact perfect-run curve; `test/practiceSession.test.js` plays real C.1 questions through whole sessions.
+- By hand: `node -e "import('./src/core/smartScore.js').then(m => console.log(m.replaySmartScore(Array(19).fill({correct:true})).history))"`
 
 ## Decisions made (and why)
-- **`check()` returns `{ correct, explanation, invalid?, unsimplified?, error? }`.** `invalid` (blank or unreadable input) should not be scored by chunk 2; the UI just shows `explanation` ("Type an answer first."). `unsimplified` is `correct: false`; chunk 2 decides whether it costs points (suggest: treat as wrong, like IXL, but the UI can say "almost").
-- **Improper fractions count as simplest form** (`7/4` is fine, `1 3/4` is fine, `14/8` is not). Grade 5 standards accept either form.
-- **Decimals compare by value**: for "round 2.996 to the nearest hundredth", `3.00`, `3.0` and `3` are all accepted. `answerText` shows the place-value form (`3.00`).
-- **Fraction answers don't accept decimals** (`0.75` for `3/4` is "invalid", with a message asking for a fraction).
-- **Difficulty is an integer 1–3** (`clampDifficulty` rounds and clamps anything else). Chunk 2 maps score → difficulty.
-- **Registry is a function, not a top-level array**, because Apps Script runs files in name order and a top-level array could reference skills not yet defined.
-- **Private helpers have long, specific names** (`parseDecimalText`, `pickAddFractionDenominators`) because everything shares one global scope in Apps Script. Follow this in new skill files.
+- **Bands (score before the answer):** 0–29 +10/−2, 30–49 +8/−3, 50–69 +6/−4, 70–79 +4/−5, 80–89 +3/−6, 90–99 +2/−8. A perfect run reaches 90 in 15 answers and 100 in 19, which is close to IXL. One slip in the Challenge Zone costs four right answers. Tune the table, not the code, if the teacher pilot finds it too hard or too easy.
+- **Unsimplified counts as wrong** (scores like a wrong answer). The UI can still show "almost, simplify it" from `check()`'s `unsimplified` flag.
+- **Invalid input is not recorded at all** (`recordPracticeAnswer` returns the same session). The student just tries again.
+- **Answer event shape** (one Sheet row each in chunk 4): `{ skillId, correct, unsimplified, difficulty, shownAt, answeredAt }`, times in epoch ms. No student identity in the event; chunk 4 adds the student column.
+- **Time per question is capped at 300 s** so an idle tab doesn't inflate "time spent".
+- **Score carries across sessions**: pass the replayed score of past rows as `startScore`. Answers after 100 still count (a wrong one drops the score), but the UI should end the session at mastery like IXL.
+- **Sessions are immutable plain data**; every function returns a new session, so they can go through `google.script.run`.
 
 ## Known issues / loose ends
-- The question object includes the answer. That's fine for the prototype, but when chunk 3/4 sends questions to the browser, a curious student could read the answer in dev tools. Option: keep questions server-side (or send a copy without `answer`/`answerText`/`data`) and check on the server.
-- `skill.check` re-derives explanations from `question.data`, so stored questions must keep `data` if they are re-checked later.
-- Wording and grade level of generated questions haven't been reviewed by a teacher yet.
+- No streak bonus or "time since last practice" decay. IXL has neither in the score itself, so left out on purpose.
+- `nextPracticeQuestion` takes a seed; real use should pass a random integer (e.g. `Math.floor(Math.random() * 2**31)`). It doesn't avoid repeating a question the student just saw.
+- Still open from chunk 1: questions include the answer, so a curious student could read it in dev tools if questions are sent to the browser.
 
 ## Next chunk
-- Chunk 2: SmartScore + session logic. Start by reading `HANDOFF.md`, `CLAUDE.md`, the "Chunk 2" section of `docs/build-plan.md`, and `src/core/skill.js` (for the `check()` result shape). Put scoring in `src/core/`; test it against real questions from `findSkill('C.1')`.
+- Chunk 3: Practice screen (mockup `3-practice.png`). Start by reading `HANDOFF.md`, the "Chunk 3" section of `docs/build-plan.md`, `src/core/practiceSession.js`, and the mockup `/mnt/project-files/mockups/3-practice.png`.
 - Needs from Paden before starting: nothing. The live deploy (`clasp login` + first deploy, see `README.md`) is needed before chunk 4.
