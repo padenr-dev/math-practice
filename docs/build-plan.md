@@ -107,7 +107,7 @@ Put these in the repo's `CLAUDE.md` during chunk 0 so every session follows them
 - **Test:** open `preview.html`, answer 10 questions, score and feedback behave; keyboard-only and screen-reader labels work.
 
 ### Chunk 4 — Results to the teacher's Sheet
-- **Build:** the template Sheet with a `Results` tab (timestamp, student email, skill, score, answered, correct, seconds) and a `Settings` tab. Server functions to append a result (with `LockService` so simultaneous students don't collide) and to read back a student's latest score per skill to resume. Write once per answered question set, not per keystroke, to stay inside quotas. Wire the practice screen to it.
+- **Build:** the template Sheet with a `Results` tab (timestamp, student email, skill, score, answered, correct, seconds) and a `Settings` tab (including the "Students must simplify fractions" checkbox, see `src/core/teacherSettings.js`). Server functions to append a result (with `LockService` so simultaneous students don't collide) and to read back a student's latest score per skill to resume. Write once per answered question set, not per keystroke, to stay inside quotas. Wire the practice screen to it.
 - **Test:** in your own copy, practice on the live URL; rows appear; reload and the score resumes. Unit tests use a fake `SpreadsheetApp`.
 - **Your steps:** redeploy (new version) and try it with a second account if you have one.
 
@@ -118,7 +118,7 @@ Put these in the repo's `CLAUDE.md` during chunk 0 so every session follows them
 - **Your steps:** confirm with the Workspace admin that student accounts can open a domain-only Apps Script web app (the under-18 "Trusted app" setting).
 
 ### Chunk 6 — Teacher class results (mockup `4-teacher.png`)
-- **Build:** class table (students × assigned skills, color-coded), questions and time columns, week filter, "Open in Sheets" link, assign-skills dialog (writes to `Settings`), "needs help" panel (below 40 on an assigned skill). Export options map to building summary tabs in the same Sheet.
+- **Build:** class table (students × assigned skills, color-coded), questions and time columns, week filter, "Open in Sheets" link, assign-skills dialog (writes to `Settings`), "Students must simplify fractions" checkbox (writes to `Settings`), "needs help" panel (below 40 on an assigned skill). Export options map to building summary tabs in the same Sheet.
 - **Test:** seed the Sheet with fake rows (script provided); the table and needs-help list match.
 
 ### Chunks 7 and 8 — Content batches

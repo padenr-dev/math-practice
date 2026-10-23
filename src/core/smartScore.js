@@ -10,8 +10,9 @@
 //
 // shownAt / answeredAt are epoch milliseconds. `correct`, `invalid` and
 // `unsimplified` come straight from skill.check(). Invalid answers (blank or
-// unreadable input) are not scored. Unsimplified answers count as wrong, like
-// IXL; the UI can still say "almost".
+// unreadable input) are not scored. Practice sessions never record an
+// unsimplified answer (the student retries, see teacherSettings.js); if one
+// does reach the score, it counts as wrong.
 //
 // Rules (score before the answer decides the band):
 //
