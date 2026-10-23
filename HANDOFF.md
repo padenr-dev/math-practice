@@ -22,6 +22,7 @@
 - **The Hint button is free** (no point cost). IXL has no hint button; if students lean on it, make it set `hinted` like the simplify hint.
 - **The whole-number box is optional** and dashed; "17/12" in the fraction boxes is also accepted (improper fractions count as simplest).
 - **Time** in the side panel is a live clock since the page opened; the summary uses the session's capped per-question seconds (chunk 2 rule).
+- **No `<form>`** on the practice screen: sandboxed viewers without `allow-forms` block form submission, so Submit was dead there. Submit is a plain button and Enter is handled on the answer boxes.
 - Header shows the signed-in email (we don't have names until chunk 5). All server text goes into the page with `textContent`; `scriptJson` escapes `<` for the page data.
 
 ## Known issues / loose ends

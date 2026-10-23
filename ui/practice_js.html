@@ -239,10 +239,15 @@
     }
 
     // --- Events ------------------------------------------------------------
-    $('answer-form').addEventListener('submit', function (e) {
-      e.preventDefault();
+    // Not a <form>: sandboxed frames without allow-forms (some previewers)
+    // block form submission, so Submit is a plain button and Enter is handled here.
+    function submitAnswer() {
       if (!view || view.done || $('submit-button').disabled) return;
       call('practiceAnswer', [view.id, readAnswer()], function (v) { show(v, false); });
+    }
+    $('submit-button').addEventListener('click', submitAnswer);
+    $('answer-area').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); submitAnswer(); }
     });
     $('next-button').addEventListener('click', function () {
       if (view.mastered) { $('finish-button').click(); return; }
