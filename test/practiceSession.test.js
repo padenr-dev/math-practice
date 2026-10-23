@@ -70,9 +70,24 @@ test('simplest form required (default): unsimplified gets a mild hint and a retr
   session = recordPracticeAnswer(session, q, result, T0, T0 + 5000);
   assert.equal(session.events.length, 0);
   assert.equal(practiceSessionScore(session), 50);
-  // The retry, simplified, scores normally.
-  session = recordPracticeAnswer(session, q, checkPracticeAnswer(skill, q, q.answerText), T0, T0 + 9000);
-  assert.equal(practiceSessionScore(session), 56);
+  // The retry, simplified, earns half the usual +6.
+  const retry = checkPracticeAnswer(skill, q, q.answerText, { hinted: result.hinted });
+  assert.equal(retry.correct, true);
+  session = recordPracticeAnswer(session, q, retry, T0, T0 + 9000);
+  assert.equal(session.events[0].hinted, true);
+  assert.equal(practiceSessionScore(session), 53);
+});
+
+test('the hint carries through an invalid try; a wrong answer after it costs the usual amount', () => {
+  let session = startPracticeSession('C.1', 50, T0);
+  const q = nextPracticeQuestion(skill, session, 7);
+  const first = checkPracticeAnswer(skill, q, unsimplifiedInput(q));
+  const blank = checkPracticeAnswer(skill, q, '', { hinted: first.hinted });
+  assert.equal(blank.retry, true);
+  assert.equal(blank.hinted, true);
+  const wrongTry = checkPracticeAnswer(skill, q, '999/1000', { hinted: blank.hinted });
+  session = recordPracticeAnswer(session, q, wrongTry, T0, T0 + 9000);
+  assert.equal(practiceSessionScore(session), 46);
 });
 
 test('simplest form not required: an equal fraction counts as correct', () => {

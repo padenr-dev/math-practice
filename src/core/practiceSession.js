@@ -8,8 +8,9 @@
 // `settings` are the teacher's (see teacherSettings.js).
 //
 // Flow for the UI: q = nextPracticeQuestion(...); result = checkPracticeAnswer(...);
-// if result.retry, show result.explanation and let the student answer again;
-// otherwise session = recordPracticeAnswer(...).
+// if result.retry, show result.explanation and let the student answer again
+// (passing { hinted: result.hinted } to the next check); otherwise
+// session = recordPracticeAnswer(...).
 import { replaySmartScore, isScoredAnswer, isCorrectAnswer, isMastered, isInChallengeZone, difficultyForScore } from './smartScore.js';
 import { createRng } from './random.js';
 import { normalizeTeacherSettings, SIMPLIFY_FRACTION_HINT } from './teacherSettings.js';
@@ -32,11 +33,14 @@ export function startPracticeSession(skillId, startScore, now, settings) {
 // already set question.requireSimplest from it). `retry: true` means the
 // answer is not scored and the student should try again (blank or unreadable
 // input, or an unsimplified fraction when simplest form is required).
-export function checkPracticeAnswer(skill, question, input) {
+// On the next try at the same question, pass { hinted: lastResult.hinted }:
+// once the simplify hint is shown, a correct answer earns fewer points.
+export function checkPracticeAnswer(skill, question, input, options) {
+  const hinted = !!(options && options.hinted);
   const result = skill.check(question, input);
-  if (result.invalid) return { ...result, retry: true };
-  if (result.unsimplified) return { ...result, retry: true, explanation: SIMPLIFY_FRACTION_HINT };
-  return result;
+  if (result.invalid) return { ...result, retry: true, hinted };
+  if (result.unsimplified) return { ...result, retry: true, hinted: true, explanation: SIMPLIFY_FRACTION_HINT };
+  return { ...result, hinted };
 }
 
 // Builds the answer event for a check result and adds it to the session.
@@ -47,6 +51,7 @@ export function recordPracticeAnswer(session, question, result, shownAt, answere
     skillId: session.skillId,
     correct: result.correct === true,
     unsimplified: !!result.unsimplified,
+    hinted: !!result.hinted,
     difficulty: question.difficulty,
     shownAt,
     answeredAt,

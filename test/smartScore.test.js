@@ -56,6 +56,12 @@ test('unsimplified counts as wrong; invalid is not scored', () => {
   assert.equal(scoreAfterAnswer(50, null), 50);
 });
 
+test('correct after the simplify hint earns half the gain, rounded up', () => {
+  const hinted = { correct: true, hinted: true };
+  assert.deepEqual([0, 30, 50, 70, 80, 90, 99].map((s) => scoreAfterAnswer(s, hinted) - s), [5, 4, 3, 2, 2, 1, 1]);
+  assert.equal(scoreAfterAnswer(92, { correct: false, hinted: true }), 84);
+});
+
 test('replay continues from a starting score', () => {
   assert.equal(run('RR', 88).score, 93); // 88+3=91, then +2 in the Challenge Zone
 });
