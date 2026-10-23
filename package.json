@@ -10,6 +10,7 @@
   "scripts": {
     "test": "node --test",
     "build": "node scripts/build.js",
+    "preview": "node scripts/preview.js",
     "push": "npm run build && clasp push --force",
     "deploy": "npm run push && node scripts/deploy.js"
   },

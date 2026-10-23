@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Math Practice</title>
+    <?!= include('practice_css') ?>
+  </head>
+  <body>
+    <a class="skip" href="#question-card">Skip to the question</a>
+    <header class="top">
+      <div class="brand"><span class="logo" aria-hidden="true">Σ</span> District Math Practice</div>
+      <div class="user" id="user-email"></div>
+    </header>
+
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <span id="crumb-grade"></span> › <span id="crumb-category"></span> › <strong id="crumb-skill"></strong>
+    </nav>
+
+    <div class="layout">
+      <main id="question-card" class="card question-card" tabindex="-1">
+        <div id="error" class="error" role="alert" hidden></div>
+        <div id="loading" class="loading">Loading your first question…</div>
+
+        <section id="practice" hidden>
+          <h1 id="question-number" class="question-number">Question 1</h1>
+          <form id="answer-form" autocomplete="off" novalidate>
+            <div id="question-body">
+              <div id="prompt" class="prompt"></div>
+              <div id="answer-area" class="answer-area"></div>
+            </div>
+            <div id="feedback" class="feedback" role="status" aria-live="polite"></div>
+            <div id="hint" class="hint" hidden></div>
+            <div class="actions">
+              <button type="button" id="hint-button" class="secondary" aria-expanded="false" aria-controls="hint"><span aria-hidden="true">💡</span> Hint</button>
+              <button type="button" id="read-button" class="secondary"><span aria-hidden="true">🔊</span> Read aloud</button>
+              <span class="spacer"></span>
+              <button type="submit" id="submit-button" class="primary">Submit</button>
+              <button type="button" id="next-button" class="primary" hidden>Next question <span aria-hidden="true">→</span></button>
+            </div>
+          </form>
+        </section>
+
+        <section id="summary" hidden>
+          <h1 id="summary-title" class="summary-title">Nice work!</h1>
+          <p id="summary-text" class="summary-text"></p>
+          <dl id="summary-stats" class="stats"></dl>
+          <button type="button" id="again-button" class="primary">Practice again</button>
+        </section>
+      </main>
+
+      <aside class="side">
+        <section class="card" aria-labelledby="score-label">
+          <h2 id="score-label" class="label">SmartScore</h2>
+          <div class="ring-wrap">
+            <svg id="score-ring" class="ring" viewBox="0 0 160 160" role="img" aria-label="SmartScore 0 out of 100">
+              <circle class="ring-track" cx="80" cy="80" r="68"></circle>
+              <circle id="ring-bar" class="ring-bar" cx="80" cy="80" r="68"></circle>
+            </svg>
+            <div class="ring-text" aria-hidden="true">
+              <div id="score-value" class="score-value">0</div>
+              <div id="score-change" class="score-change"></div>
+            </div>
+          </div>
+          <p id="score-message" class="score-message"></p>
+        </section>
+
+        <section class="card" aria-labelledby="session-label">
+          <h2 id="session-label" class="label">This session</h2>
+          <dl class="stats">
+            <div><dt>Questions answered</dt><dd id="stat-answered">0</dd></div>
+            <div><dt>Correct</dt><dd id="stat-correct">0 of 0</dd></div>
+            <div><dt>Time</dt><dd id="stat-time">0:00</dd></div>
+          </dl>
+          <button type="button" id="finish-button" class="link-button">I'm done for now</button>
+        </section>
+
+        <p class="privacy"><span aria-hidden="true">🔒</span> When you finish, your score goes to your teacher's Google Sheet. Nothing is kept in this app.</p>
+      </aside>
+    </div>
+
+    <script>var PAGE = <?!= pageJson ?>;</script>
+    <?!= include('practice_js') ?>
+  </body>
+</html>

@@ -1,30 +1,36 @@
-# Handoff — after chunk 2 (2026-10-23)
+# Handoff — after chunk 3 (2026-10-23)
 
 ## Done
-- SmartScore in `src/core/smartScore.js`: score 0–100, big early gains, smaller near mastery, a penalty for wrong answers that grows with the score, Challenge Zone at 90–99, mastered at 100. The rules are one table (`SMART_SCORE_BANDS`) documented at the top of the file.
-- `difficultyForScore(score)`: difficulty 1 below 40, 2 from 40, 3 from 75.
-- Score is never stored. `replaySmartScore(events, startScore)` rebuilds it from answer events, so chunk 4 can recompute it from Sheet rows.
-- Teacher setting "Students must simplify fractions" (`src/core/teacherSettings.js`). Logic only; the checkbox itself lands in the teacher view (chunk 6), stored on the `Settings` tab (chunk 4).
-- Practice sessions in `src/core/practiceSession.js`: `startPracticeSession(skillId, startScore, now, settings)`, `checkPracticeAnswer`, `recordPracticeAnswer` (turns a `check()` result into an answer event), `nextPracticeQuestion` (picks difficulty from the current score), `practiceSessionScore`, `practiceSessionStats` (answered, correct, wrong, accuracy %, seconds, start score, score, change, Challenge Zone, mastered).
+- Practice screen (`ui/practice.html` + `practice_css.html` + `practice_js.html`) matching mockup 3: question with stacked fractions, fraction boxes (optional whole-number box, numerator, denominator) or one box for decimals, feedback box with the explanation, Hint, Read aloud, SmartScore ring with change and Challenge Zone message, session panel (answered, correct, time), "I'm done for now" summary.
+- `doGet` now serves the practice screen. `?skill=A.3` picks the skill (default C.1). `ui/index.html` (the hello page) is gone.
+- Server side in `src/core/practiceRun.js` over a key/value store: `beginPracticeRun`, `answerPracticeRun`, `nextPracticeRun`, `finishPracticeRun`. `gas/Code.js` wraps them as `practiceStart/Answer/Next/Finish` for `google.script.run`, with `CacheService.getScriptCache()` as the store.
+- The browser never gets the answer: the full question stays in the cache under a random run id, and the page only gets a "view" (prompt, hint, feedback, score). This closes the chunk 1 loose end.
+- The simplify setting from chunk 2 shows as a soft amber box with `SIMPLIFY_FRACTION_HINT`; the question stays, and a right answer after it earns half points.
+- Read aloud uses the browser's `speechSynthesis`. `src/core/spokenMath.js` turns "1/4 + 2/3 = ?" into "1 fourth plus 2 thirds equals what?"; the server sends spoken text for the question and the feedback.
+- `npm run preview` writes `preview/preview.html` (git-ignored): one file with the real bundle, fake CacheService/Utilities/Session, and a fake `google.script.run` that calls the real `gas/Code.js` functions.
 
 ## How to test it
-- `npm test` (61 tests). `test/smartScore.test.js` has scripted sequences and the exact perfect-run curve; `test/practiceSession.test.js` plays real C.1 questions through whole sessions.
-- By hand: `node -e "import('./src/core/smartScore.js').then(m => console.log(m.replaySmartScore(Array(19).fill({correct:true})).history))"`
+- `npm test` (70 tests). `test/practiceRun.test.js` plays runs through the store; `test/build.test.js` calls doGet and all four server functions in the built bundle, and checks preview.html's scripts parse.
+- `npm run preview`, open `preview/preview.html`, answer 10 questions with the keyboard only: type, Enter submits, focus moves to "Next question", Enter again. Type `/` in the top box to jump to the bottom one. Try 2/4-style answers for the simplify hint and a blank submit.
+- Checked here with Playwright (Chromium): 10 C.1 answers (right, wrong, unsimplified then right), score 0 → 69 as the table predicts, summary, A.3 blank + right at phone width, no console errors.
 
 ## Decisions made (and why)
-- **Bands (score before the answer):** 0–29 +10/−2, 30–49 +8/−3, 50–69 +6/−4, 70–79 +4/−5, 80–89 +3/−6, 90–99 +2/−8. A perfect run reaches 90 in 15 answers and 100 in 19, which is close to IXL. One slip in the Challenge Zone costs four right answers. Tune the table, not the code, if the teacher pilot finds it too hard or too easy.
-- **Unsimplified fractions are a teacher checkbox** (Paden's call): `requireSimplestForm` in `src/core/teacherSettings.js`, default on. On: `checkPracticeAnswer` returns `retry: true` with the mild hint `SIMPLIFY_FRACTION_HINT` (it doesn't reveal the answer), the unsimplified try costs nothing, and the student tries again. A correct answer after the hint earns half the usual gain, rounded up (+5, +4, +3, +2, +2, +1 by band); a wrong one costs the usual amount (Paden's call). The UI passes `{ hinted: lastResult.hinted }` to the next `checkPracticeAnswer` on the same question, and the event stores `hinted`. Off: `nextPracticeQuestion` clears `question.requireSimplest`, so any equal fraction is correct. Sheet checkbox values (`TRUE`/`FALSE`) are accepted by `normalizeTeacherSettings`.
-- **Retry answers are not recorded** (invalid input or the simplify hint): `recordPracticeAnswer` returns the same session. The UI should use `checkPracticeAnswer`, not `skill.check`, so the setting applies.
-- **Answer event shape** (one Sheet row each in chunk 4): `{ skillId, correct, unsimplified, hinted, difficulty, shownAt, answeredAt }`, times in epoch ms. No student identity in the event; chunk 4 adds the student column.
-- **Time per question is capped at 300 s** so an idle tab doesn't inflate "time spent".
-- **Score carries across sessions**: pass the replayed score of past rows as `startScore`. Answers after 100 still count (a wrong one drops the score), but the UI should end the session at mastery like IXL.
-- **Sessions are immutable plain data**; every function returns a new session, so they can go through `google.script.run`.
+- **Script cache, not user cache.** The web app runs "Execute as me", so `getUserCache()` would be Paden's cache for every student. Runs are keyed by `Utilities.getUuid()` and kept 6 hours (the cache maximum). No email or name is stored in the cache.
+- **Checking is server-side** (one `google.script.run` call per submit, about a second). Slower than checking in the browser, but answers can't be read in dev tools.
+- **No skipping**: `nextPracticeRun` ignores the call until the question is answered. A second submit of an answered question returns the same view, so a double click can't record twice.
+- **At 100 the run stops** offering questions and the button becomes "See my results".
+- **The Hint button is free** (no point cost). IXL has no hint button; if students lean on it, make it set `hinted` like the simplify hint.
+- **The whole-number box is optional** and dashed; "17/12" in the fraction boxes is also accepted (improper fractions count as simplest).
+- **Time** in the side panel is a live clock since the page opened; the summary uses the session's capped per-question seconds (chunk 2 rule).
+- Header shows the signed-in email (we don't have names until chunk 5). All server text goes into the page with `textContent`; `scriptJson` escapes `<` for the page data.
 
 ## Known issues / loose ends
-- No streak bonus or "time since last practice" decay. IXL has neither in the score itself, so left out on purpose.
-- `nextPracticeQuestion` takes a seed; real use should pass a random integer (e.g. `Math.floor(Math.random() * 2**31)`). It doesn't avoid repeating a question the student just saw.
-- Still open from chunk 1: questions include the answer, so a curious student could read it in dev tools if questions are sent to the browser.
+- Nothing is saved yet: `practiceStart` uses start score 0 and default teacher settings, and `finishPracticeRun` only returns stats. Chunk 4 hooks in there (comments mark the spots in `gas/Code.js` and `practiceRun.js`).
+- If a run's cache entry expires (6 h) or is evicted, the page shows "timed out, reload". The script cache is 100 KB per key, enough for several hundred answers.
+- `src/core/greeting.js` is no longer used by the page; delete it in chunk 5 if the sign-in screen doesn't want it.
+- Read-aloud voices vary by browser; Chromebooks have one built in. Not tested with a real screen reader (labels and live regions are in place: answer boxes are labeled, feedback is `role=status`, the ring is `role=img` with the score).
+- The live deploy hasn't happened yet, so the page hasn't run inside Apps Script's iframe.
 
 ## Next chunk
-- Chunk 3: Practice screen (mockup `3-practice.png`). When `checkPracticeAnswer` returns `retry`, show its `explanation` softly and keep the question. Start by reading `HANDOFF.md`, the "Chunk 3" section of `docs/build-plan.md`, `src/core/practiceSession.js`, `src/core/teacherSettings.js`, and the mockup `/mnt/project-files/mockups/3-practice.png`.
-- Needs from Paden before starting: nothing. The live deploy (`clasp login` + first deploy, see `README.md`) is needed before chunk 4.
+- Chunk 4: Results to the teacher's Sheet. Start by reading `HANDOFF.md`, the "Chunk 4" section of `docs/build-plan.md`, `gas/Code.js`, `src/core/practiceRun.js` (`finishPracticeRun`) and `src/core/teacherSettings.js`.
+- Needs from Paden before starting: the one-time Google setup (`clasp login` + first deploy, see `README.md`). After that, opening the web app URL should show this practice screen.
