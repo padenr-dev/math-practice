@@ -16,8 +16,14 @@ as a lower-cost alternative to IXL. See `docs/build-plan.md` for the plan and
    npm run deploy
    ```
 4. Open the printed web app URL, approve the permission prompt, and you should
-   see "Hello, *your email*".
+   see the practice screen for C.1 (add `?skill=A.3` to the URL for the other skill).
 5. Commit the new `.clasp.json` and `.deployment-id` files.
 
 `npx clasp login` stores your Google credentials in `~/.clasprc.json` on your
 computer. Never copy that file into the repo or a cloud session.
+
+## Trying the practice screen without Google
+
+`npm run preview` writes `preview/preview.html`, a single file that runs the
+real app code in any browser with fake Google services. Open it, answer some
+questions, and use the links at the top to switch skills. Nothing is saved.
